@@ -80,13 +80,14 @@ namespace CoreAPI.DataBaseContext
                 entity.Property(e => e.CreatedAt).HasDefaultValueSql("GETUTCDATE()");
                 entity.Property(e => e.UpdatedAt).HasDefaultValueSql("GETUTCDATE()");
 
-                entity.HasOne<User>()
+                // Explicitly bind navigations to avoid shadow FKs like UserId1 / DepartmentId1
+                entity.HasOne(e => e.User)
                     .WithMany()
                     .HasForeignKey(e => e.UserId)
                     .OnDelete(DeleteBehavior.Cascade);
 
-                entity.HasOne<Department>()
-                    .WithMany(e => e.Employees)
+                entity.HasOne(e => e.Department)
+                    .WithMany(d => d.Employees)
                     .HasForeignKey(e => e.DepartmentId)
                     .OnDelete(DeleteBehavior.SetNull);
             });

@@ -10,11 +10,11 @@ namespace CoreAPI.Controllers
     [Authorize]
     [ApiController]
     [Route("api/[controller]")]
-    public class EmployeeNewController : ControllerBase
+    public class EmployeeController : ControllerBase
     {
         private readonly APIDBContext _context;
 
-        public EmployeeNewController(APIDBContext context)
+        public EmployeeController(APIDBContext context)
         {
             _context = context;
         }

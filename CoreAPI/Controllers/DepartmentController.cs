@@ -9,11 +9,11 @@ namespace CoreAPI.Controllers
     [Authorize]
     [ApiController]
     [Route("api/[controller]")]
-    public class DepartmentNewController : ControllerBase
+    public class DepartmentController : ControllerBase
     {
         private readonly APIDBContext _context;
 
-        public DepartmentNewController(APIDBContext context)
+        public DepartmentController(APIDBContext context)
         {
             _context = context;
         }
