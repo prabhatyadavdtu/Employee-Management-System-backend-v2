@@ -70,6 +70,8 @@ namespace CoreAPI.Models
         public string? Address { get; set; }
 
         public int? DepartmentId { get; set; }
+
+        public bool IsActive { get; set; } = true;
     }
 
     public class EmployeeUpdateRequest

@@ -22,18 +22,26 @@ namespace CoreAPI.Controllers
         public async Task<ActionResult<List<DepartmentResponse>>> GetDepartments()
         {
             var departments = await _context.Departments
-                .Select(d => new DepartmentResponse
-                {
-                    DepartmentId = d.DepartmentId,
-                    Name = d.Name,
-                    Description = d.Description,
-                    ManagerId = d.ManagerId,
-                    ManagerName = null,
-                    Budget = d.Budget,
-                    EmployeeCount = 0,
-                    CreatedAt = d.CreatedAt,
-                    UpdatedAt = d.UpdatedAt
-                })
+                .Include(d => d.Manager)
+                .GroupJoin(
+                    _context.Employees.Where(e => e.IsActive),
+                    d => d.DepartmentId,
+                    e => e.DepartmentId,
+                    (d, employees) => new DepartmentResponse
+                    {
+                        DepartmentId = d.DepartmentId,
+                        Name = d.Name,
+                        Description = d.Description,
+                        ManagerId = d.ManagerId,
+                        ManagerName = d.Manager != null
+                            ? d.Manager.FirstName + " " + d.Manager.LastName
+                            : null,
+                        Budget = d.Budget,
+                        EmployeeCount = employees.Count(),
+                        CreatedAt = d.CreatedAt,
+                        UpdatedAt = d.UpdatedAt
+                    }
+                )
                 .ToListAsync();
 
             return Ok(departments);

@@ -22,6 +22,7 @@ namespace CoreAPI.Controllers
         // GET: api/employee
         [HttpGet]
         public async Task<ActionResult<PaginatedResponse<EmployeeResponse>>> GetEmployees([FromQuery] EmployeeSearchRequest request)
+        
         {
             var query = _context.Employees
                 .Include(e => e.User)
@@ -151,71 +152,78 @@ namespace CoreAPI.Controllers
                 return BadRequest(ModelState);
             }
 
-            // Check if email already exists
-            if (await _context.Users.AnyAsync(u => u.Email == request.Email))
+            try
+            {
+                // Check if email already exists
+                if (await _context.Users.AnyAsync(u => u.Email == request.Email))
+                {
+                    return BadRequest(new { message = "Email already exists" });
+                }
+
+                // Check if department exists if provided
+                if (request.DepartmentId.HasValue)
+                {
+                    var department = await _context.Departments.FindAsync(request.DepartmentId.Value);
+                    if (department == null)
+                    {
+                        return BadRequest(new { message = "Department not found" });
+                    }
+                }
+
+                // Create user
+                var user = new User
+                {
+                    FirstName = request.FirstName,
+                    LastName = request.LastName,
+                    Email = request.Email,
+                    Company = request.Company,
+                    PasswordHash = BCrypt.Net.BCrypt.HashPassword("temp123"),
+                    Role = "User"
+                };
+
+                // Create employee (EF Core will handle the relationship)
+                var employee = new Employee
+                {
+                    User = user, // Set navigation property instead of UserId
+                    DepartmentId = request.DepartmentId,
+                    Position = request.Position,
+                    HireDate = request.HireDate,
+                    Salary = request.Salary,
+                    Phone = request.Phone,
+                    Address = request.Address
+                };
+
+                _context.Users.Add(user);
+                _context.Employees.Add(employee);
+
+                // Single SaveChanges - EF Core handles the transaction internally
+                await _context.SaveChangesAsync();
+
+                var response = new EmployeeResponse
+                {
+                    EmployeeId = employee.EmployeeId,
+                    UserId = employee.UserId,
+                    FirstName = user.FirstName,
+                    LastName = user.LastName,
+                    Email = user.Email,
+                    Company = user.Company,
+                    Position = employee.Position,
+                    HireDate = employee.HireDate,
+                    Salary = employee.Salary,
+                    Phone = employee.Phone,
+                    Address = employee.Address,
+                    IsActive = employee.IsActive,
+                    DepartmentId = employee.DepartmentId,
+                    CreatedAt = employee.CreatedAt,
+                    UpdatedAt = employee.UpdatedAt
+                };
+
+                return CreatedAtAction(nameof(GetEmployee), new { id = employee.EmployeeId }, response);
+            }
+            catch (DbUpdateException ex) when (ex.InnerException?.Message.Contains("unique") == true)
             {
                 return BadRequest(new { message = "Email already exists" });
             }
-
-            // Check if department exists if provided
-            if (request.DepartmentId.HasValue)
-            {
-                var department = await _context.Departments.FindAsync(request.DepartmentId.Value);
-                if (department == null)
-                {
-                    return BadRequest(new { message = "Department not found" });
-                }
-            }
-
-            // Create user first
-            var user = new User
-            {
-                FirstName = request.FirstName,
-                LastName = request.LastName,
-                Email = request.Email,
-                Company = request.Company,
-                PasswordHash = BCrypt.Net.BCrypt.HashPassword("temp123"), // Temporary password
-                Role = "Employee"
-            };
-
-            _context.Users.Add(user);
-            await _context.SaveChangesAsync();
-
-            // Create employee
-            var employee = new Employee
-            {
-                UserId = user.UserId,
-                DepartmentId = request.DepartmentId,
-                Position = request.Position,
-                HireDate = request.HireDate,
-                Salary = request.Salary,
-                Phone = request.Phone,
-                Address = request.Address
-            };
-
-            _context.Employees.Add(employee);
-            await _context.SaveChangesAsync();
-
-            var response = new EmployeeResponse
-            {
-                EmployeeId = employee.EmployeeId,
-                UserId = employee.UserId,
-                FirstName = user.FirstName,
-                LastName = user.LastName,
-                Email = user.Email,
-                Company = user.Company,
-                Position = employee.Position,
-                HireDate = employee.HireDate,
-                Salary = employee.Salary,
-                Phone = employee.Phone,
-                Address = employee.Address,
-                IsActive = employee.IsActive,
-                DepartmentId = employee.DepartmentId,
-                CreatedAt = employee.CreatedAt,
-                UpdatedAt = employee.UpdatedAt
-            };
-
-            return CreatedAtAction(nameof(GetEmployee), new { id = employee.EmployeeId }, response);
         }
 
         // PUT: api/employee/{id}
