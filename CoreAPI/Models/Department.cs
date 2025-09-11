@@ -17,6 +17,8 @@ namespace CoreAPI.Models
 
         public decimal? Budget { get; set; }
 
+        public bool? IsActive { get; set; } = true; // default
+
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
         public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
@@ -63,6 +65,7 @@ namespace CoreAPI.Models
         public string? ManagerName { get; set; }
         public decimal? Budget { get; set; }
         public int EmployeeCount { get; set; }
+        public bool? IsActive { get; set; } 
         public DateTime CreatedAt { get; set; }
         public DateTime UpdatedAt { get; set; }
     }

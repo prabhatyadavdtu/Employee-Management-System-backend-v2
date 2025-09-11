@@ -22,6 +22,7 @@ namespace CoreAPI.Controllers
         public async Task<ActionResult<List<DepartmentResponse>>> GetDepartments()
         {
             var departments = await _context.Departments
+                .Where(d => (bool)d.IsActive) // 👈 only active departments
                 .Include(d => d.Manager)
                 .GroupJoin(
                     _context.Employees.Where(e => e.IsActive),
@@ -38,6 +39,7 @@ namespace CoreAPI.Controllers
                             : null,
                         Budget = d.Budget,
                         EmployeeCount = employees.Count(),
+                        IsActive = d.IsActive,
                         CreatedAt = d.CreatedAt,
                         UpdatedAt = d.UpdatedAt
                     }
@@ -83,9 +85,17 @@ namespace CoreAPI.Controllers
                 return BadRequest(ModelState);
             }
 
+            var department = await _context.Departments
+                .FirstOrDefaultAsync(d => d.Name == request.Name);
+
+            if (department != null)
+            {
+                return BadRequest(new { message = "Department already exist with this name." });
+            }
+
             // Manager validation removed for simplicity
 
-            var department = new Department
+            var new_department = new Department
             {
                 Name = request.Name,
                 Description = request.Description,
@@ -93,22 +103,22 @@ namespace CoreAPI.Controllers
                 Budget = request.Budget
             };
 
-            _context.Departments.Add(department);
+            _context.Departments.Add(new_department);
             await _context.SaveChangesAsync();
 
             var response = new DepartmentResponse
             {
-                DepartmentId = department.DepartmentId,
-                Name = department.Name,
-                Description = department.Description,
-                ManagerId = department.ManagerId,
-                Budget = department.Budget,
+                DepartmentId = new_department.DepartmentId,
+                Name = new_department.Name,
+                Description = new_department.Description,
+                ManagerId = new_department.ManagerId,
+                Budget = new_department.Budget,
                 EmployeeCount = 0,
-                CreatedAt = department.CreatedAt,
-                UpdatedAt = department.UpdatedAt
+                CreatedAt = new_department.CreatedAt,
+                UpdatedAt = new_department.UpdatedAt
             };
 
-            return CreatedAtAction(nameof(GetDepartment), new { id = department.DepartmentId }, response);
+            return CreatedAtAction(nameof(GetDepartment), new { id = new_department.DepartmentId }, response);
         }
 
         // PUT: api/department/{id}
@@ -154,17 +164,23 @@ namespace CoreAPI.Controllers
         // DELETE: api/department/{id}
         [HttpDelete("{id}")]
         public async Task<ActionResult> DeleteDepartment(int id)
-        {
-            var department = await _context.Departments.FirstOrDefaultAsync(d => d.DepartmentId == id);
+        {            
+            var department = await _context.Departments
+                .Include(d => d.Employees.Where(e => e.IsActive))
+                .FirstOrDefaultAsync(d => d.DepartmentId == id);
 
             if (department == null)
             {
                 return NotFound(new { message = "Department not found" });
             }
 
-            // Skip employee check for simplicity
+            if (department.Employees.Any())
+            {
+                return BadRequest(new { message = "Cannot delete department with active employees" });
+            }
 
-            _context.Departments.Remove(department);
+            department.IsActive = false;
+            //_context.Departments.Remove(department);
             await _context.SaveChangesAsync();
 
             return Ok(new { message = "Department deleted successfully" });

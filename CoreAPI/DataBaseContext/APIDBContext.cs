@@ -58,6 +58,7 @@ namespace CoreAPI.DataBaseContext
                 entity.Property(e => e.Budget).HasColumnType("decimal(15,2)");
                 entity.Property(e => e.CreatedAt).HasDefaultValueSql("GETUTCDATE()");
                 entity.Property(e => e.UpdatedAt).HasDefaultValueSql("GETUTCDATE()");
+                entity.Property(e => e.IsActive).HasDefaultValue(true);
 
                 // Configure the relationship with explicit navigation property
                 entity.HasOne(d => d.Manager)  // Reference the navigation property
