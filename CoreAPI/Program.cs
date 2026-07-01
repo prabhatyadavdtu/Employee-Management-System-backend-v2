@@ -21,8 +21,7 @@ builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 // Configure Entity Framework
-builder.Services.AddDbContext<APIDBContext>(options => options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
-
+builder.Services.AddDbContext<APIDBContext>(options => options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
 // Configure JWT Authentication
 var jwtSettings = builder.Configuration.GetSection("Jwt");
 var key = Encoding.ASCII.GetBytes(jwtSettings["SecretKey"] ?? throw new InvalidOperationException("JWT Secret Key not configured"));
@@ -34,7 +33,7 @@ builder.Services.AddAuthentication(options =>
 })
 .AddJwtBearer(options =>
 {
-    options.RequireHttpsMetadata = false;
+    options.RequireHttpsMetadata = !builder.Environment.IsDevelopment();
     options.SaveToken = true;
     options.TokenValidationParameters = new TokenValidationParameters
     {
@@ -52,14 +51,18 @@ builder.Services.AddAuthentication(options =>
 // Register services
 builder.Services.AddScoped<JwtService>();
 builder.Services.AddScoped<AuthService>();
+builder.Services.AddHealthChecks();
 
 
 //Enable CORS
+var allowedOrigins = builder.Configuration["CORS_AllowedOrigins"] ?? "http://localhost:3000";
 builder.Services.AddCors(c =>
 {
-    //c.AddPolicy("AllowOrigin", options => options.AllowAnyOrigin().AllowAnyMethod()
-    c.AddPolicy("AllowReactApp", options => options.WithOrigins("http://localhost:3000").AllowAnyHeader().AllowAnyMethod()
-    .AllowCredentials());
+    c.AddPolicy("AllowReactApp", options => 
+        options.WithOrigins(allowedOrigins.Split(";"))
+            .AllowAnyHeader()
+            .AllowAnyMethod()
+            .AllowCredentials());
 });
 
 // Configure Swagger
@@ -101,39 +104,45 @@ builder.Services.AddControllersWithViews().AddNewtonsoftJson(options => options.
 builder.Services.AddControllers();
 
 var app = builder.Build();
+
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI();
 }
-app.UseHttpsRedirection();
+else
+{
+    // Production security settings
+    app.UseHsts();
+}
+
 // Use CORS
 //app.UseCors(options => options.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader());
 app.UseCors("AllowReactApp");
 app.UseRouting();
 app.UseAuthentication();
 app.UseAuthorization();
-app.UseEndpoints(endpoints => {
-    endpoints.MapControllers();
-});
 app.UseSwagger();
 app.UseSwaggerUI(c => {
     c.SwaggerEndpoint("/swagger/v1/swagger.json", "WEB API");
     c.DocumentTitle = "WEB API";
     c.DocExpansion(DocExpansion.List);
 });
+var photosPath = Path.Combine(Directory.GetCurrentDirectory(), "Photos");
+Directory.CreateDirectory(photosPath);
 app.UseStaticFiles(new StaticFileOptions
 {
-    FileProvider = new PhysicalFileProvider(Path.Combine(Directory.GetCurrentDirectory(), "Photos")),
+    FileProvider = new PhysicalFileProvider(photosPath),
     RequestPath = "/Photos"
 });
+app.MapHealthChecks("/health");
 app.MapControllers();
 
-// Ensure database is created
+// Apply pending migrations before accepting traffic.
 using (var scope = app.Services.CreateScope())
 {
     var context = scope.ServiceProvider.GetRequiredService<APIDBContext>();
-    context.Database.EnsureCreated();
+    context.Database.Migrate();
 }
 app.Run();

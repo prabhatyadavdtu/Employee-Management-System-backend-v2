@@ -29,8 +29,8 @@ namespace CoreAPI.DataBaseContext
                 entity.Property(e => e.Company).IsRequired().HasMaxLength(100);
                 entity.Property(e => e.Role).HasMaxLength(20).HasDefaultValue("User");
                 entity.Property(e => e.IsActive).HasDefaultValue(true);
-                entity.Property(e => e.CreatedAt).HasDefaultValueSql("GETUTCDATE()");
-                entity.Property(e => e.UpdatedAt).HasDefaultValueSql("GETUTCDATE()");
+                entity.Property(e => e.CreatedAt).HasDefaultValueSql("NOW() AT TIME ZONE 'UTC'");
+                entity.Property(e => e.UpdatedAt).HasDefaultValueSql("NOW() AT TIME ZONE 'UTC'");
             });
 
             // RefreshToken entity configuration
@@ -40,7 +40,7 @@ namespace CoreAPI.DataBaseContext
                 entity.Property(e => e.Token).IsRequired().HasMaxLength(500);
                 entity.Property(e => e.ExpiresAt).IsRequired();
                 entity.Property(e => e.IsRevoked).HasDefaultValue(false);
-                entity.Property(e => e.CreatedAt).HasDefaultValueSql("GETUTCDATE()");
+                entity.Property(e => e.CreatedAt).HasDefaultValueSql("NOW() AT TIME ZONE 'UTC'");
 
                 // Update the relationship configuration
                 entity.HasOne(e => e.User)
@@ -56,8 +56,8 @@ namespace CoreAPI.DataBaseContext
                 entity.Property(e => e.Name).IsRequired().HasMaxLength(100);
                 entity.Property(e => e.Description).HasMaxLength(500);
                 entity.Property(e => e.Budget).HasColumnType("decimal(15,2)");
-                entity.Property(e => e.CreatedAt).HasDefaultValueSql("GETUTCDATE()");
-                entity.Property(e => e.UpdatedAt).HasDefaultValueSql("GETUTCDATE()");
+                entity.Property(e => e.CreatedAt).HasDefaultValueSql("NOW() AT TIME ZONE 'UTC'");
+                entity.Property(e => e.UpdatedAt).HasDefaultValueSql("NOW() AT TIME ZONE 'UTC'");
                 entity.Property(e => e.IsActive).HasDefaultValue(true);
 
                 // Configure the relationship with explicit navigation property
@@ -78,8 +78,8 @@ namespace CoreAPI.DataBaseContext
                 entity.Property(e => e.Phone).HasMaxLength(20);
                 entity.Property(e => e.Address).HasMaxLength(255);
                 entity.Property(e => e.IsActive).HasDefaultValue(true);
-                entity.Property(e => e.CreatedAt).HasDefaultValueSql("GETUTCDATE()");
-                entity.Property(e => e.UpdatedAt).HasDefaultValueSql("GETUTCDATE()");
+                entity.Property(e => e.CreatedAt).HasDefaultValueSql("NOW() AT TIME ZONE 'UTC'");
+                entity.Property(e => e.UpdatedAt).HasDefaultValueSql("NOW() AT TIME ZONE 'UTC'");
 
                 // Explicitly bind navigations to avoid shadow FKs like UserId1 / DepartmentId1
                 entity.HasOne(e => e.User)
@@ -104,6 +104,6 @@ namespace CoreAPI.DataBaseContext
         public DateTime CreatedAt { get; set; }
 
         // Navigation property
-        public User User { get; set; }
+        public User? User { get; set; }
     }
 }
